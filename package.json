@@ -1,0 +1,22 @@
+{
+    "name": "foresttimeapi",
+    "version": "1.0.0",
+    "description": "",
+    "main": "code.js",
+    "scripts": {
+        "typecheck": "tsc --noEmit",
+        "compress": "terser ./build/main.js -o ./dist/bundle.js --mangle --comments false --keep-fnames",
+        "build": "tsc && npm run compress && copyfiles ./appsscript.json ./dist/",
+        "push": "npm run build && clasp push"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "type": "commonjs",
+    "devDependencies": {
+        "@types/google-apps-script": "^2.0.0",
+        "copyfiles": "^2.4.1",
+        "terser": "^5.43.1",
+        "typescript": "^5.9.2"
+    }
+}
