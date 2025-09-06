@@ -5,8 +5,9 @@
     "main": "code.js",
     "scripts": {
         "typecheck": "tsc --noEmit",
-        "compress": "terser ./build/main.js -o ./dist/bundle.js --mangle --comments false --keep-fnames",
-        "build": "tsc && npm run compress && copyfiles ./appsscript.json ./dist/",
+        "compress": "terser ./build/main.js ./build/*.js -o ./dist/bundle.js --compress --mangle --comments false --keep-fnames",
+        "cleanup": "node cleanup.js ./build",
+        "build": "tsc &&  npm run cleanup && npm run compress && copyfiles ./appsscript.json ./dist/",
         "push": "npm run build && clasp push"
     },
     "keywords": [],
