@@ -1,6 +1,20 @@
 'use strict';
 
-interface AttendanceRecord {
+export interface AuthRequest {
+    username: string
+    password: string
+}
+
+export interface AuthResponse {
+    success: boolean
+    token?: string
+}
+
+export interface APITokenCheckRequest { token?: string }
+export interface APITokenCheckResponse { success: boolean }
+
+// === ===
+export interface AttendanceRecord {
     record_id: string;
     employee_id: string;
     check_in_time: string;
@@ -12,7 +26,7 @@ interface AttendanceRecord {
     updated_at: string;
 }
 
-interface ActivityData {
+export interface ActivityData {
     activity_id: string;
     record_id: string;
     employee_id: string;
@@ -29,7 +43,7 @@ interface ActivityData {
     created_at: string;
 }
 
-interface Employee {
+export interface Employee {
     employee_id: string;
     name: string;
     email: string;
@@ -40,7 +54,7 @@ interface Employee {
     updated_at: string;
 }
 
-interface WorkArea {
+export interface WorkArea {
     area_id: string;
     area_name: string;
     coordinates: number[][];
@@ -49,22 +63,10 @@ interface WorkArea {
     updated_at: string;
 }
 
-interface AuthRequest {
-    name: string;
-    password: string;
-}
-
-interface AuthResponse {
-    success: boolean;
-    message: string;
-    token?: string;
-}
-
-interface ApiResponse<T> {
+export interface ApiResponse<T> {
     success: boolean;
     data?: T | undefined;    // 明示的に undefined を含める
     error?: string | undefined;  // 明示的に undefined を含める
     timestamp: string;
 }
 
-export { AttendanceRecord, ActivityData, Employee, WorkArea, AuthRequest, AuthResponse, ApiResponse }

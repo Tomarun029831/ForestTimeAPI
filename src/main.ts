@@ -1,6 +1,6 @@
 'use strict';
 
-import { ApiResponse, ActivityData, AttendanceRecord, AuthRequest, AuthResponse, WorkArea, Employee } from "./type"
+import { ApiResponse, ActivityData, AttendanceRecord, AuthRequest, AuthResponse, WorkArea, Employee, APITokenCheckRequest, APITokenCheckResponse } from "./type"
 
 // 共通のレスポンス作成関数
 function createResponse<T>(success: boolean, data?: T, error?: string): GoogleAppsScript.Content.TextOutput {
@@ -65,21 +65,50 @@ function doGet(e: GoogleAppsScript.Events.DoGet): GoogleAppsScript.Content.TextO
     }
 }
 
-// POST リクエスト処理
+function handleLogin(e: GoogleAppsScript.Events.DoPost): GoogleAppsScript.Content.TextOutput { // HACK: stub
+    const uuid = Utilities.getUuid();
+    const response: AuthResponse = {
+        success: true,
+        token: uuid
+    };
+    return ContentService.createTextOutput(JSON.stringify(response))
+        .setMimeType(ContentService.MimeType.JSON);
+}
+
+function handleTokenCheck(e: GoogleAppsScript.Events.DoPost): GoogleAppsScript.Content.TextOutput {
+    const reqBody = JSON.parse(e.postData?.contents || '{}') as APITokenCheckRequest;
+    const token = reqBody.token;
+    if (token === undefined || token === '') {
+        const response: APITokenCheckResponse = { success: false };
+        return ContentService.createTextOutput(JSON.stringify(response))
+            .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    const response: APITokenCheckResponse = { success: true }; // HACK: stub
+    return ContentService.createTextOutput(JSON.stringify(response))
+        .setMimeType(ContentService.MimeType.JSON);
+}
+
 function doPost(e: GoogleAppsScript.Events.DoPost): GoogleAppsScript.Content.TextOutput {
     try {
         const action = e.parameter.action || '';
 
         switch (action) {
-            case 'auth':
-                return handleAuth(e);
+            case 'login':
+                return handleLogin(e);
 
-            case 'createAttendance':
-                return createResponse(true, createAttendanceRecord(e));
+            case 'checkToken':
+                return handleTokenCheck(e);
 
-            case 'updateAttendance':
-                return createResponse(true, updateAttendanceRecord(e));
-
+            // case 'auth':
+            //     return handleAuth(e);
+            //
+            // case 'createAttendance':
+            //     return createResponse(true, createAttendanceRecord(e));
+            //
+            // case 'updateAttendance':
+            //     return createResponse(true, updateAttendanceRecord(e));
+            //
             default:
                 return createResponse(false, null, `POSTでサポートされていないアクション: ${action}`);
         }
@@ -93,26 +122,23 @@ function doPost(e: GoogleAppsScript.Events.DoPost): GoogleAppsScript.Content.Tex
 function handleAuth(e: GoogleAppsScript.Events.DoPost): GoogleAppsScript.Content.TextOutput {
     try {
         const postData = JSON.parse(e.postData?.contents || '{}') as AuthRequest;
-        const { name, password } = postData;
+        const { username, password } = postData;
 
         let authResult: AuthResponse;
 
-        if (name === 'admin' && password === 'forest123') {
+        if (username === 'admin' && password === 'admin123') {
             authResult = {
                 success: true,
-                message: '管理者認証成功',
                 token: 'admin_token_' + new Date().getTime()
             };
-        } else if (name === 'user' && password === 'user123') {
+        } else if (username === 'user' && password === 'user123') {
             authResult = {
                 success: true,
-                message: 'ユーザー認証成功',
                 token: 'user_token_' + new Date().getTime()
             };
         } else {
             authResult = {
                 success: false,
-                message: '認証失敗: ユーザー名またはパスワードが間違っています'
             };
         }
 
