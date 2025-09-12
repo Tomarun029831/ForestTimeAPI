@@ -4,7 +4,8 @@ import {
     ApiResponse, ActivityData, AttendanceRecord, AuthRequest,
     AuthResponse, WorkArea, Employee, TokenCheckRequest,
     TokenCheckResponse, GetAllEmployeesRequest, GetAllEmployeesResponse
-    , AddEmployeeRequest, AddEmployeeResponse
+    , AddEmployeeRequest, AddEmployeeResponse,
+    DeleteEmployeeRequest, DeleteEmployeeResponse
 } from "./type"
 
 // 共通のレスポンス作成関数
@@ -189,6 +190,53 @@ function handleAddEmployee(e: GoogleAppsScript.Events.DoPost): GoogleAppsScript.
         .setMimeType(ContentService.MimeType.JSON);
 }
 
+function deleteEmployee(employeeId: string): boolean {
+    try {
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        const sheet = ss.getSheetByName("employees");
+        if (sheet === null) {
+            return false; // シートが存在しない
+        }
+
+        const values = sheet.getDataRange().getValues(); // 全行取得
+        const headers = values[0] as string[];
+
+        const idCol = headers.indexOf("id");
+        if (idCol === -1) {
+            return false; // id 列が存在しない
+        }
+
+        // 2行目以降を探索
+        for (let row = 1; row < values.length; row++) {
+            if (values[row] === undefined) continue;
+            if (values[row]?.[idCol] === employeeId) { // HACK:
+                sheet.deleteRow(row + 1); // GAS は1始まりなので +1
+                return true;
+            }
+        }
+
+        return false; // 見つからなかった
+    } catch (err) {
+        Logger.log("deleteEmployee error: " + err);
+        return false;
+    }
+}
+
+function handleDeleteEmployee(e: GoogleAppsScript.Events.DoPost): GoogleAppsScript.Content.TextOutput {
+    const reqBody = JSON.parse(e.postData?.contents || '{}') as DeleteEmployeeRequest;
+    const token = reqBody.token;
+    if (!checkToken(token) || reqBody.employeeId === undefined) {
+        const res: AddEmployeeResponse = { success: false };
+        return ContentService.createTextOutput(JSON.stringify(res))
+            .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    const result: boolean = deleteEmployee(reqBody.employeeId);
+    const res: AddEmployeeResponse = { success: result };
+    return ContentService.createTextOutput(JSON.stringify(res))
+        .setMimeType(ContentService.MimeType.JSON);
+}
+
 function doPost(e: GoogleAppsScript.Events.DoPost): GoogleAppsScript.Content.TextOutput {
     try {
         const action = e.parameter.action || '';
@@ -205,6 +253,9 @@ function doPost(e: GoogleAppsScript.Events.DoPost): GoogleAppsScript.Content.Tex
 
             case 'addEmployee':
                 return handleAddEmployee(e);
+
+            case 'deleteEmployee':
+                return handleDeleteEmployee(e);
 
             // case 'auth':
             //     return handleAuth(e);

@@ -29,6 +29,10 @@ export interface GetAllEmployeesResponse { success: boolean, employees?: Employe
 export interface AddEmployeeRequest { token?: string, newEmployee?: Employee }
 export interface AddEmployeeResponse { success: boolean }
 
+export interface DeleteEmployeeRequest { token?: string, employeeId?: string }
+export interface DeleteEmployeeResponse { success: boolean }
+
+
 // === ===
 export interface AttendanceRecord {
     record_id: string;
