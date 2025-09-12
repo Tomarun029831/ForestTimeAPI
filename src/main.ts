@@ -1,6 +1,11 @@
 'use strict';
 
-import { ApiResponse, ActivityData, AttendanceRecord, AuthRequest, AuthResponse, WorkArea, Employee, APITokenCheckRequest, APITokenCheckResponse } from "./type"
+import {
+    ApiResponse, ActivityData, AttendanceRecord, AuthRequest,
+    AuthResponse, WorkArea, Employee, TokenCheckRequest,
+    TokenCheckResponse, GetAllEmployeesRequest, GetAllEmployeesResponse
+    , AddEmployeeRequest, AddEmployeeResponse
+} from "./type"
 
 // 共通のレスポンス作成関数
 function createResponse<T>(success: boolean, data?: T, error?: string): GoogleAppsScript.Content.TextOutput {
@@ -29,8 +34,6 @@ function doGet(e: GoogleAppsScript.Events.DoGet): GoogleAppsScript.Content.TextO
             case 'getActivityData':
                 return createResponse(true, getActivityData(employeeId));
 
-            case 'getEmployeeData':
-                return createResponse(true, getEmployeeData());
 
             case 'getWorkareaData':
                 return createResponse(true, getWorkAreaData());
@@ -75,17 +78,114 @@ function handleLogin(e: GoogleAppsScript.Events.DoPost): GoogleAppsScript.Conten
         .setMimeType(ContentService.MimeType.JSON);
 }
 
+function checkToken(token: string | undefined): boolean { // HACK: stub
+    if (token === undefined || token === '') return false;
+
+    return true; // success
+}
+
 function handleTokenCheck(e: GoogleAppsScript.Events.DoPost): GoogleAppsScript.Content.TextOutput {
-    const reqBody = JSON.parse(e.postData?.contents || '{}') as APITokenCheckRequest;
+    const reqBody = JSON.parse(e.postData?.contents || '{}') as TokenCheckRequest;
     const token = reqBody.token;
-    if (token === undefined || token === '') {
-        const response: APITokenCheckResponse = { success: false };
-        return ContentService.createTextOutput(JSON.stringify(response))
+
+    const response: TokenCheckResponse = { success: checkToken(token) };
+    return ContentService.createTextOutput(JSON.stringify(response))
+        .setMimeType(ContentService.MimeType.JSON);
+}
+
+function getAllEmployees(): Employee[] {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName("employees");
+    if (sheet === null) {
+        const sheet = ss.insertSheet("employees");
+        sheet.appendRow(["id", "name", "phoneNumber", "email", "department", "position", "hireDate"]);
+        return [];
+    }
+    const values = sheet.getDataRange().getValues();
+
+    // 1行目をヘッダーと仮定
+    const headers = values[0] as string[];
+    const dataRows = values.slice(1);
+
+    return dataRows.map(row => {
+        return {
+            id: row[headers.indexOf("id")],
+            name: row[headers.indexOf("name")],
+            phoneNumber: row[headers.indexOf("phoneNumber")] || undefined,
+            email: row[headers.indexOf("email")] || undefined,
+            department: row[headers.indexOf("department")],
+            position: row[headers.indexOf("position")],
+            hireDate: row[headers.indexOf("hireDate")]
+                ? new Date(row[headers.indexOf("hireDate")])
+                : undefined,
+        } as Employee;
+    });
+}
+
+function handleGetAllEmployees(e: GoogleAppsScript.Events.DoPost): GoogleAppsScript.Content.TextOutput {
+    const reqBody = JSON.parse(e.postData?.contents || '{}') as GetAllEmployeesRequest;
+    const token = reqBody.token;
+    if (!checkToken(token)) {
+        const res: GetAllEmployeesResponse = { success: false };
+        return ContentService.createTextOutput(JSON.stringify(res))
             .setMimeType(ContentService.MimeType.JSON);
     }
 
-    const response: APITokenCheckResponse = { success: true }; // HACK: stub
-    return ContentService.createTextOutput(JSON.stringify(response))
+    const employees: Employee[] = getAllEmployees();
+    const res: GetAllEmployeesResponse = { success: true, employees: employees };
+    return ContentService.createTextOutput(JSON.stringify(res))
+        .setMimeType(ContentService.MimeType.JSON);
+}
+
+function addNewEmployee(newEmployee: Employee): boolean {
+    try {
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        let sheet = ss.getSheetByName("employees");
+
+        // なければ作成＋ヘッダー行
+        if (sheet === null) {
+            sheet = ss.insertSheet("employees");
+            sheet.appendRow([
+                "id", "name", "phoneNumber", "email",
+                "department", "position", "hireDate"
+            ]);
+        }
+
+        // hireDate が Date ならシートに書けるようフォーマット
+        const hireDateValue =
+            newEmployee.hireDate instanceof Date
+                ? Utilities.formatDate(newEmployee.hireDate, Session.getScriptTimeZone(), "yyyy/MM/dd")
+                : newEmployee.hireDate || "";
+
+        sheet.appendRow([
+            newEmployee.id,
+            newEmployee.name,
+            newEmployee.phoneNumber || "",
+            newEmployee.email || "",
+            newEmployee.department,
+            newEmployee.position,
+            hireDateValue,
+        ]);
+
+        return true;
+    } catch (err) {
+        Logger.log("addNewEmployee error: " + err);
+        return false;
+    }
+}
+
+function handleAddEmployee(e: GoogleAppsScript.Events.DoPost): GoogleAppsScript.Content.TextOutput {
+    const reqBody = JSON.parse(e.postData?.contents || '{}') as AddEmployeeRequest;
+    const token = reqBody.token;
+    if (!checkToken(token) || reqBody.newEmployee === undefined) {
+        const res: AddEmployeeResponse = { success: false };
+        return ContentService.createTextOutput(JSON.stringify(res))
+            .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    const result: boolean = addNewEmployee(reqBody.newEmployee);
+    const res: AddEmployeeResponse = { success: result };
+    return ContentService.createTextOutput(JSON.stringify(res))
         .setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -99,6 +199,12 @@ function doPost(e: GoogleAppsScript.Events.DoPost): GoogleAppsScript.Content.Tex
 
             case 'checkToken':
                 return handleTokenCheck(e);
+
+            case 'getAllEmployees':
+                return handleGetAllEmployees(e);
+
+            case 'addEmployee':
+                return handleAddEmployee(e);
 
             // case 'auth':
             //     return handleAuth(e);
@@ -236,56 +342,6 @@ function getActivityData(employeeId: string | null): ActivityData[] {
     return employeeId
         ? activities.filter(activity => activity.employee_id === employeeId)
         : activities;
-}
-
-// 従業員データ取得
-function getEmployeeData(): Employee {
-    return {
-        employee_id: '550e8400-e29b-41d4-a716-446655440101',
-        name: '山田太郎',
-        email: 'yamada@foresttime.co.jp',
-        phone_number: '090-1234-5678',
-        assigned_area: 'area_forest_a',
-        is_active: true,
-        created_at: '2023-04-01T00:00:00Z',
-        updated_at: '2024-03-15T08:00:00Z'
-    };
-}
-
-// 全従業員取得
-function getAllEmployees(): Employee[] {
-    return [
-        {
-            employee_id: '550e8400-e29b-41d4-a716-446655440101',
-            name: '山田太郎',
-            email: 'yamada@foresttime.co.jp',
-            phone_number: '090-1234-5678',
-            assigned_area: 'area_forest_a',
-            is_active: true,
-            created_at: '2023-04-01T00:00:00Z',
-            updated_at: '2024-03-15T08:00:00Z'
-        },
-        {
-            employee_id: '550e8400-e29b-41d4-a716-446655440102',
-            name: '佐藤花子',
-            email: 'sato@foresttime.co.jp',
-            phone_number: '090-2345-6789',
-            assigned_area: 'area_forest_b',
-            is_active: true,
-            created_at: '2023-06-15T00:00:00Z',
-            updated_at: '2024-03-15T08:30:00Z'
-        },
-        {
-            employee_id: '550e8400-e29b-41d4-a716-446655440103',
-            name: '田中一郎',
-            email: 'tanaka@foresttime.co.jp',
-            phone_number: '090-3456-7890',
-            assigned_area: 'area_work_base',
-            is_active: true,
-            created_at: '2023-08-01T00:00:00Z',
-            updated_at: '2024-03-15T09:00:00Z'
-        }
-    ];
 }
 
 // 作業エリアデータ取得

@@ -1,5 +1,15 @@
 'use strict';
 
+export interface Employee {
+    id: string // Uuid
+    name: string
+    phoneNumber?: string
+    email?: string
+    department: string
+    position: string
+    hireDate?: Date
+}
+
 export interface AuthRequest {
     username: string
     password: string
@@ -10,8 +20,14 @@ export interface AuthResponse {
     token?: string
 }
 
-export interface APITokenCheckRequest { token?: string }
-export interface APITokenCheckResponse { success: boolean }
+export interface TokenCheckRequest { token?: string }
+export interface TokenCheckResponse { success: boolean }
+
+export interface GetAllEmployeesRequest { token?: string }
+export interface GetAllEmployeesResponse { success: boolean, employees?: Employee[] }
+
+export interface AddEmployeeRequest { token?: string, newEmployee?: Employee }
+export interface AddEmployeeResponse { success: boolean }
 
 // === ===
 export interface AttendanceRecord {
@@ -41,17 +57,6 @@ export interface ActivityData {
     activity_type: string;
     is_synced: boolean;
     created_at: string;
-}
-
-export interface Employee {
-    employee_id: string;
-    name: string;
-    email: string;
-    phone_number: string | null;
-    assigned_area: string | null;
-    is_active: boolean;
-    created_at: string;
-    updated_at: string;
 }
 
 export interface WorkArea {
