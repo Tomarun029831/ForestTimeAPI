@@ -1,5 +1,18 @@
 'use strict';
 
+// login
+export interface AuthRequest {
+    username: string
+    password: string
+}
+export interface AuthResponse {
+    success: boolean
+    token?: string
+}
+export interface TokenCheckRequest { token?: string }
+export interface TokenCheckResponse { success: boolean }
+
+// Employee
 export interface Employee {
     id: string // Uuid
     name: string
@@ -9,29 +22,28 @@ export interface Employee {
     position: string
     hireDate?: Date
 }
-
-export interface AuthRequest {
-    username: string
-    password: string
-}
-
-export interface AuthResponse {
-    success: boolean
-    token?: string
-}
-
-export interface TokenCheckRequest { token?: string }
-export interface TokenCheckResponse { success: boolean }
-
 export interface GetAllEmployeesRequest { token?: string }
 export interface GetAllEmployeesResponse { success: boolean, employees?: Employee[] }
-
 export interface AddEmployeeRequest { token?: string, newEmployee?: Employee }
 export interface AddEmployeeResponse { success: boolean }
-
 export interface DeleteEmployeeRequest { token?: string, employeeId?: string }
 export interface DeleteEmployeeResponse { success: boolean }
 
+// WorkArea
+export interface CircularGeoFence {
+    id: string
+    name: string
+    center: { lat: number; lng: number }
+    radius: number // in meters
+    description: string
+    color: string
+}
+export interface GetAllWorkareaRequest { token?: string }
+export interface GetAllWorkareaResponse { success: boolean, areas?: CircularGeoFence[] }
+export interface AddWorkareaRequest { token?: string, area?: CircularGeoFence }
+export interface AddWorkareaResponse { success: boolean }
+export interface DeleteWorkareaRequest { token?: string, areaId?: string }
+export interface DeleteWorkareaResponse { success: boolean }
 
 // === ===
 export interface AttendanceRecord {
