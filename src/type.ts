@@ -22,6 +22,9 @@ export interface Employee {
     position: string
     hireDate?: Date
 }
+
+export interface GetEmployeeByIdRequest { token?: string, id?: string }
+export interface GetEmployeeByIdResponse { success: boolean, employee?: Employee }
 export interface GetAllEmployeesRequest { token?: string }
 export interface GetAllEmployeesResponse { success: boolean, employees?: Employee[] }
 export interface AddEmployeeRequest { token?: string, newEmployee?: Employee }

@@ -12,7 +12,9 @@ import {
     GetAllWorkareaResponse,
     DeleteWorkareaRequest,
     DeleteWorkareaResponse,
-    AuthRequest
+    AuthRequest,
+    GetEmployeeByIdRequest,
+    GetEmployeeByIdResponse
 } from "./type"
 
 function createResponse<T>(success: boolean, data?: T, error?: string): GoogleAppsScript.Content.TextOutput {
@@ -55,7 +57,6 @@ function handleLogin(e: GoogleAppsScript.Events.DoPost): GoogleAppsScript.Conten
 // Token
 function checkToken(token: string | undefined): boolean { // HACK: stub
     if (token === undefined || token === '') return false;
-
     return true; // success
 }
 
@@ -97,6 +98,13 @@ function getAllEmployees(): Employee[] {
         } as Employee;
     });
 }
+
+function getEmployeeById(employeeId: string): Employee | undefined {
+    const allEmployees = getAllEmployees();
+    const employee = allEmployees.find(e => e.id === employeeId);
+    return employee ?? undefined;
+}
+
 
 function handleGetAllEmployees(e: GoogleAppsScript.Events.DoPost): GoogleAppsScript.Content.TextOutput {
     const reqBody = JSON.parse(e.postData?.contents || '{}') as GetAllEmployeesRequest;
@@ -257,6 +265,28 @@ function handleGetAllWorkareas(e: GoogleAppsScript.Events.DoPost): GoogleAppsScr
         .setMimeType(ContentService.MimeType.JSON);
 }
 
+function handleGetEmployeeById(e: GoogleAppsScript.Events.DoPost): GoogleAppsScript.Content.TextOutput {
+    const reqBody = JSON.parse(e.postData?.contents || '{}') as GetEmployeeByIdRequest;
+    const token = reqBody.token;
+    const employeeId = reqBody.id
+    if (!checkToken(token) || employeeId === undefined) {
+        const res: GetEmployeeByIdResponse = { success: false };
+        return ContentService.createTextOutput(JSON.stringify(res))
+            .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    const employee = getEmployeeById(employeeId);
+    if (employee === undefined) {
+        const res: GetEmployeeByIdResponse = { success: false };
+        return ContentService.createTextOutput(JSON.stringify(res))
+            .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    const res: GetEmployeeByIdResponse = { success: true, employee: employee };
+    return ContentService.createTextOutput(JSON.stringify(res))
+        .setMimeType(ContentService.MimeType.JSON);
+}
+
 function addNewArea(area: CircularGeoFence): boolean {
     try {
         const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -355,6 +385,8 @@ function doPost(e: GoogleAppsScript.Events.DoPost): GoogleAppsScript.Content.Tex
                 return handleAddEmployee(e);
             case 'deleteEmployee':
                 return handleDeleteEmployee(e);
+            case 'getEmployeeById':
+                return handleGetEmployeeById(e);
 
             case 'getAllWorkareas':
                 return handleGetAllWorkareas(e);
