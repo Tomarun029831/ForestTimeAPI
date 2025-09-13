@@ -11,7 +11,8 @@ import {
     GetAllWorkareaRequest,
     GetAllWorkareaResponse,
     DeleteWorkareaRequest,
-    DeleteWorkareaResponse
+    DeleteWorkareaResponse,
+    AuthRequest
 } from "./type"
 
 function createResponse<T>(success: boolean, data?: T, error?: string): GoogleAppsScript.Content.TextOutput {
@@ -29,9 +30,22 @@ function createResponse<T>(success: boolean, data?: T, error?: string): GoogleAp
 
 // login
 function handleLogin(e: GoogleAppsScript.Events.DoPost): GoogleAppsScript.Content.TextOutput { // HACK: stub
+    const reqBody = JSON.parse(e.postData?.contents || '{}') as AuthRequest;
+    const username = reqBody.username;
+    const password = reqBody.password;
+    if (username === 'admin' && password === 'admin123') {
+        const uuid = Utilities.getUuid();
+        const response: AuthResponse = {
+            success: true,
+            token: uuid
+        };
+        return ContentService.createTextOutput(JSON.stringify(response))
+            .setMimeType(ContentService.MimeType.JSON);
+    }
+
     const uuid = Utilities.getUuid();
     const response: AuthResponse = {
-        success: true,
+        success: false,
         token: uuid
     };
     return ContentService.createTextOutput(JSON.stringify(response))
